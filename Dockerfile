@@ -1,28 +1,20 @@
 FROM node:22.12-alpine AS builder
 
-
-COPY . /app
-WORKDIR /app
-
-
-RUN --mount=type=cache,target=/root/.npm npm install
+# Установка MCP
+RUN npm install -g @brightdata/mcp
 
 FROM node:22-alpine AS release
 
-WORKDIR /app
+# Копируем установленный MCP из builder
+COPY --from=builder /usr/local/lib/node_modules/@brightdata/mcp /app/mcp
 
+# Устанавливаем зависимости
+WORKDIR /app/mcp
+RUN npm install --omit-dev
 
-COPY --from=builder /app/server.js /app/
-COPY --from=builder /app/browser_tools.js /app/
-COPY --from=builder /app/browser_session.js /app/
-COPY --from=builder /app/package.json /app/
-COPY --from=builder /app/package-lock.json /app/
-
-
+# Настройка окружения
 ENV NODE_ENV=production
+EXPOSE 8080
 
-
-RUN npm ci --ignore-scripts --omit-dev
-
-
-ENTRYPOINT ["node", "server.js"]
+# Запуск сервера
+CMD ["node", "server.js"]
